@@ -1,8 +1,10 @@
 
+import os
 
+os.sys.path.append(os.path.dirname(os.curdir))
 import torch.nn as nn
 import torch
-from transformer import TransformerEncoder, TransformerEncoderLayer
+from ViT.transformer import TransformerEncoder, TransformerEncoderLayer
 
 class ViT(nn.Module):
     def __init__(self, 
@@ -15,7 +17,7 @@ class ViT(nn.Module):
                  pool='cls', 
                  channels=3, 
                  dropout=0.1, 
-                ):
+                 ):
         
         
         super().__init__()
@@ -61,6 +63,7 @@ if __name__ == "__main__":
 
     # Create a dummy input tensor with the shape (batch_size, channels, height, width)
     dummy_input = torch.randn(1, 3, 224, 224)
+    print("Input shape:", dummy_input.shape)
 
     # Perform inference
     with torch.no_grad():
