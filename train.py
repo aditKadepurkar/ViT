@@ -4,9 +4,13 @@ import torch
 from datasets import load_dataset
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 def train():
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+
     model = ViT()
+    model.to(device=device)
     model.train()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -21,31 +25,44 @@ def train():
 
     # load data(imagenet 1k dataset)
     dataset = load_dataset('imagenet-1k', trust_remote_code=True)
-    train_dataset = ImageNetDataset(dataset['train'], transform=transform)
-    dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=1)
+    train_dataset = ImageNetDataset(dataset['train'], device=device, transform=transform)
+    dataloader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=16, pin_memory=True)
 
-    print("Parameters:", sum(p.numel() for p in model.parameters()))
+    params = sum(p.numel() for p in model.parameters())
+    print(f"Parameters: {params:e}")
     print("Starting training")
 
-    for epoch in range(10):
-        for idx, (images, labels) in enumerate(dataloader):
+    # print(len(dataloader))
 
-            # forward
-            logits = model(images)
-            
-            # loss calculation
-            loss = torch.nn.CrossEntropyLoss()(logits, labels)
-            
-            # backpropagate the loss!!
-            loss.backward()
+    with tqdm(total=10, desc="Epochs", unit="epoch") as pbar1:
+        for epoch in range(1, 11):
+            loss_total = 0
+            with tqdm(total=len(dataloader), desc=f"Epoch {epoch}", unit="batch", leave=True) as pbar:
+                for idx, (images, labels) in enumerate(dataloader):
 
-            # logging
-            if idx % 1 == 0:
-                print(f"Epoch {epoch}, Iteration {idx}, Loss {loss.item()}")
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                optimizer.step()
-                optimizer.zero_grad()
-    
+                    # forward
+                    images = images.to(device)
+                    logits = model(images)
+
+                    labels = labels.to(device)
+
+                    # loss calculation
+                    loss = torch.nn.CrossEntropyLoss()(logits, labels)
+                    
+                    # backpropagate the loss!!
+                    loss.backward()
+                    loss_total += loss.item()
+
+                    # logging
+                    if idx % 50 == 0:
+                        pbar.set_postfix(loss=loss.item())
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        optimizer.step()
+                        optimizer.zero_grad()
+                    pbar.update(1)
+            pbar.write(f"Loss: {loss_total / len(dataloader)}")
+            pbar1.update(1)
+
     # save
     print("Saving model to model/model.pth")
     torch.save(model.state_dict(), 'model/model.pth')

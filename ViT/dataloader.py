@@ -8,9 +8,10 @@ from PIL import Image
 
 # Define a custom dataset class
 class ImageNetDataset:
-    def __init__(self, dataset, transform=None):
+    def __init__(self, dataset, device, transform=None):
         self.dataset = dataset
         self.transform = transform
+        self.device = device
 
     def __len__(self):
         return len(self.dataset)
@@ -27,6 +28,9 @@ class ImageNetDataset:
         if self.transform:
             image = self.transform(image)
         
+        # image.to(self.device)
+        # label.to(self.device)
+
         return image, label
 
 
