@@ -1,3 +1,3 @@
 # Overview
-Simple implementation of ViT(Vision Transformer) on the imagenet challenge for my own learning.
+Simple implementation of ViT(Vision Transformer) with some inference tests.
 

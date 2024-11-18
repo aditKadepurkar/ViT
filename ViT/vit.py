@@ -5,11 +5,12 @@ os.sys.path.append(os.path.dirname(os.curdir))
 import torch.nn as nn
 import torch
 from ViT.transformer import TransformerEncoder, TransformerEncoderLayer
+import math
 
 class ViT(nn.Module):
     def __init__(self, 
                  image_size=224, 
-                 patch_size=16, 
+                 patch_size=32, 
                  num_classes=1000, 
                  dim=768, 
                  depth=12, 
@@ -22,10 +23,11 @@ class ViT(nn.Module):
         
         super().__init__()
         num_patches = (image_size // patch_size) ** 2
+        # print(num_patches)
         self.patches = nn.Conv2d(channels, dim, kernel_size=patch_size, stride=patch_size)
         self.patch_embeddings = nn.Conv2d(channels, dim, kernel_size=patch_size, stride=patch_size)
 
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
+        self.pos_embedding = self.create_sinusoidal_embeddings(num_patches + 1, dim)
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(dropout)
 
@@ -39,6 +41,14 @@ class ViT(nn.Module):
             nn.LayerNorm(dim),
             nn.Linear(dim, num_classes)
         )
+
+    def create_sinusoidal_embeddings(self, num_embeddings, embedding_dim):
+        position = torch.arange(0, num_embeddings, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, embedding_dim, 2).float() * (-math.log(10000.0) / embedding_dim))
+        embeddings = torch.zeros(num_embeddings, embedding_dim)
+        embeddings[:, 0::2] = torch.sin(position * div_term)
+        embeddings[:, 1::2] = torch.cos(position * div_term)
+        return nn.Parameter(embeddings.unsqueeze(0), requires_grad=False)
 
     def forward(self, img):
         x = self.patches(img)
