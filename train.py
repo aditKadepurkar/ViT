@@ -30,7 +30,7 @@ def train():
     lr_scheduler = get_scheduler(
         name='cosine',
         optimizer=optimizer,
-        num_warmup_steps=500,
+        num_warmup_steps=5000,
         num_training_steps=len(dataloader) * 100
     )
 
